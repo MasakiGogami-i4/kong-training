@@ -23,7 +23,7 @@ jobs:
 
       - name: Pull Kong from DockerHub
         run: |
-          docker pull kong/kong-gateway:${{ vars.KONG_VER }}
+          docker pull --platform=linux/arm64 kong/kong-gateway:${{ vars.KONG_VER }}
 
       - name: Scan Kong image with Trivy
         uses: aquasecurity/trivy-action@master
