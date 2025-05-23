@@ -138,6 +138,7 @@ jobs:
 
           ingressController:
             enabled: false
+            installCRDs: false
 
           resources:
             requests:
