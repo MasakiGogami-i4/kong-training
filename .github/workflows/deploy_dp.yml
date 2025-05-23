@@ -110,6 +110,7 @@ jobs:
           image:
             repository: ${{ vars.KONG_REPO }}
             tag: ${{ vars.KONG_VER }}
+            pullPolicy: Always
             pullSecrets:
               - ghcr-secret
 
