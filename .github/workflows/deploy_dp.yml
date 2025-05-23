@@ -139,4 +139,4 @@ jobs:
         run: |
           helm repo add kong https://charts.konghq.com
           helm repo update
-          helm upgrade -i my-kong kong/kong -n kong --values ./values.yaml --wait --atomic --debug --timeout 10m
+          helm upgrade -i my-kong kong/kong -n kong --values ./values.yaml --wait --debug --timeout 10m
