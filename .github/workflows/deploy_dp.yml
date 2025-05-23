@@ -89,6 +89,10 @@ jobs:
           echo "cp_endpoint=$CP_ENDPOINT" >> $GITHUB_OUTPUT
           echo "tp_endpoint=$TP_ENDPOINT" >> $GITHUB_OUTPUT
 
+      - name: Dump all outputs
+        run: |
+          echo '${{ toJson(steps.cert.outputs) }}'
+
       - name: Create TLS secret for Kong
         run: |
           kubectl create secret tls kong-cluster-cert -n kong \
@@ -114,16 +118,22 @@ jobs:
           env:
             role: data_plane
             database: "off"
-            konnect_mode: "on"
             cluster_mtls: pki
             cluster_control_plane: ${{ steps.cert.outputs.cp_endpoint }}:443
+            cluster_dp_labels: "type:docker-kubernetesOS"
             cluster_server_name: ${{ steps.cert.outputs.cp_endpoint }}
             cluster_telemetry_endpoint: ${{ steps.cert.outputs.tp_endpoint }}:443
             cluster_telemetry_server_name: ${{ steps.cert.outputs.tp_endpoint }}
             cluster_cert: /etc/secrets/kong-cluster-cert/tls.crt
             cluster_cert_key: /etc/secrets/kong-cluster-cert/tls.key
             lua_ssl_trusted_certificate: system
+            konnect_mode: "on"
             vitals: "off"
+            nginx_worker_processes: "1"
+            upstream_keepalive_max_requests: "100000"
+            nginx_http_keepalive_requests: "100000"
+            proxy_access_log: "off"
+            dns_stale_ttl: "3600"
             router_flavor: expressions
 
           ingressController:
