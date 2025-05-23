@@ -5,7 +5,11 @@ on:
 
 jobs:
   deploy-dp:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
+    strategy:
+      matrix:
+        platform:
+          - linux/arm64
 
     env:
       KONNECT_API: https://us.api.konghq.com/v2
