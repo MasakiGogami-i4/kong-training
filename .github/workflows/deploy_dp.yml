@@ -1,0 +1,136 @@
+name: Deploy Kong Data Plane to AKS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy-dp:
+    runs-on: ubuntu-latest
+
+    env:
+      KONNECT_API: https://us.api.konghq.com/v2
+
+    steps:
+      - name: Set up dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq openssl
+
+      - name: Azure login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Set up kubeconfig for AKS
+        run: |
+          az aks get-credentials --resource-group ${{ secrets.AKS_RESOURCE_GROUP }} --name ${{ secrets.AKS_CLUSTER_NAME }} --overwrite-existing
+
+      - name: Generate client certificate and upload to Konnect
+        id: cert
+        run: |
+          mkdir certs
+          openssl req -new -x509 -nodes -newkey rsa:2048 \
+            -subj "/CN=kongdp/C=US" \
+            -keyout ./certs/tls.key -out ./certs/tls.crt -days 3650
+
+          export CERT=$(awk 'NF {sub(/\r/, ""); printf "%s\\n",$0;}' ./certs/tls.crt)
+
+          CP_ID=$(curl -s -X GET \
+            -H "Authorization: Bearer ${{ secrets.KONNECT_TOKEN }}" \
+            "$KONNECT_API/control-planes" \
+            | jq -r --arg name "${{ vars.CP_NAME }}" '.data[] | select(.name==$name) | .id')
+
+          curl -sX POST \
+            -H "Authorization: Bearer ${{ secrets.KONNECT_TOKEN }}" \
+            "$KONNECT_API/control-planes/${CP_ID}/dp-client-certificates" \
+            --json '{"cert":"'"$CERT"'"}'
+
+          CP_ENDPOINT=$(curl -s -X GET \
+            -H "Authorization: Bearer ${{ secrets.KONNECT_TOKEN }}" \
+            "$KONNECT_API/control-planes/${CP_ID}" \
+            | jq -r '.config.control_plane_endpoint' | sed "s@https://@@")
+
+          TP_ENDPOINT=$(curl -s -X GET \
+            -H "Authorization: Bearer ${{ secrets.KONNECT_TOKEN }}" \
+            "$KONNECT_API/control-planes/${CP_ID}" \
+            | jq -r '.config.telemetry_endpoint' | sed "s@https://@@")
+
+          echo "cp_endpoint=$CP_ENDPOINT" >> $GITHUB_OUTPUT
+          echo "tp_endpoint=$TP_ENDPOINT" >> $GITHUB_OUTPUT
+
+      - name: Create TLS secret for Kong
+        run: |
+          kubectl create ns kong || true
+          kubectl create secret tls kong-cluster-cert -n kong \
+            --cert=./certs/tls.crt \
+            --key=./certs/tls.key \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Create GHCR registry pull secret
+        run: |
+          kubectl create secret docker-registry ghcr-secret \
+            --docker-server=ghcr.io \
+            --docker-username=${{ secrets.GHCR_USERNAME }} \
+            --docker-password=${{ secrets.GHCR_TOKEN }} \
+            --docker-email=${{ secrets.GHCR_EMAIL }} \
+            -n kong --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Generate Helm values.yaml
+        run: |
+          cat <<EOF > ./values.yaml
+          image:
+            repository: ${{ vars.KONG_REPO }}
+            tag: ${{ vars.KONG_VER }}
+            pullSecrets:
+              - ghcr-secret
+
+          secretVolumes:
+            - kong-cluster-cert
+
+          admin:
+            enabled: false
+
+          env:
+            role: data_plane
+            database: "off"
+            cluster_mtls: pki
+            cluster_control_plane: ${{ steps.cert.outputs.cp_endpoint }}:443
+            cluster_server_name: ${{ steps.cert.outputs.cp_endpoint }}
+            cluster_telemetry_endpoint: ${{ steps.cert.outputs.tp_endpoint }}:443
+            cluster_telemetry_server_name: ${{ steps.cert.outputs.tp_endpoint }}
+            cluster_cert: /etc/secrets/kong-cluster-cert/tls.crt
+            cluster_cert_key: /etc/secrets/kong-cluster-cert/tls.key
+            lua_ssl_trusted_certificate: system
+            konnect_mode: "on"
+            vitals: "off"
+            nginx_worker_processes: "1"
+            upstream_keepalive_max_requests: "100000"
+            nginx_http_keepalive_requests: "100000"
+            proxy_access_log: "off"
+            dns_stale_ttl: "3600"
+            router_flavor: expressions
+
+          ingressController:
+            enabled: false
+            installCRDs: false
+
+          resources:
+            requests:
+              cpu: 1
+              memory: "2Gi"
+          EOF
+
+      - name: Deploy Kong with Helm
+        run: |
+          helm repo add kong https://charts.konghq.com
+          helm repo update
+          helm upgrade -i my-kong kong/kong -n kong --values ./values.yaml --wait --debug
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: kong-dp-certs
+          path: |
+            ./certs/tls.crt
+            ./certs/tls.key
+            ./values.yaml
