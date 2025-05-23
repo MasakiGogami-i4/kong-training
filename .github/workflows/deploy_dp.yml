@@ -31,8 +31,8 @@ jobs:
 
       - name: Retag and Push to GHCR
         run: |
-          docker tag kong/kong-gateway:${{ vars.KONG_VER }} ghcr.io/${{ secrets.GHCR_USERNAME }}/kong-gateway:${{ vars.KONG_VER }}
-          docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/kong-gateway:${{ vars.KONG_VER }}
+          docker tag kong/kong-gateway:${{ vars.KONG_VER }} ${{KONG_REPO}}:${{ vars.KONG_VER }}
+          docker push ${{KONG_REPO}}:${{ vars.KONG_VER }}
 
       - name: Azure login
         uses: azure/login@v1
@@ -100,7 +100,7 @@ jobs:
         run: |
           cat <<EOF > values.yaml
           image:
-            repository: ghcr.io/${{ secrets.GHCR_USERNAME }}/kong-gateway
+            repository: ${{KONG_REPO}}
             tag: ${{ vars.KONG_VER }}
             pullSecrets:
               - ghcr-secret
