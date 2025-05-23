@@ -11,21 +11,52 @@ jobs:
       KONNECT_API: https://us.api.konghq.com/v2
 
     steps:
-      - name: Set up dependencies
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
+
+      - name: Pull Kong from DockerHub
         run: |
-          sudo apt-get update
-          sudo apt-get install -y jq openssl
+          docker pull kong/kong-gateway:${{ vars.KONG_VER }}
+
+      - name: Scan Kong image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: kong/kong-gateway:${{ vars.KONG_VER }}
+          format: table
+          severity: CRITICAL,HIGH
+          exit-code: 1
+
+      - name: Retag and Push to GHCR
+        run: |
+          docker tag kong/kong-gateway:${{ vars.KONG_VER }} ghcr.io/${{ secrets.GHCR_USERNAME }}/kong-gateway:${{ vars.KONG_VER }}
+          docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/kong-gateway:${{ vars.KONG_VER }}
 
       - name: Azure login
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Set up kubeconfig for AKS
+      - name: Get AKS kubeconfig
         run: |
-          az aks get-credentials --resource-group ${{ secrets.AKS_RESOURCE_GROUP }} --name ${{ secrets.AKS_CLUSTER_NAME }} --overwrite-existing
+          az aks get-credentials \
+            --resource-group ${{ secrets.AKS_RESOURCE_GROUP }} \
+            --name ${{ secrets.AKS_CLUSTER_NAME }} \
+            --overwrite-existing
 
-      - name: Generate client certificate and upload to Konnect
+      - name: Create GHCR pull secret in Kubernetes
+        run: |
+          kubectl create ns kong || true
+          kubectl create secret docker-registry ghcr-secret \
+            --docker-server=ghcr.io \
+            --docker-username=${{ secrets.GHCR_USERNAME }} \
+            --docker-password=${{ secrets.GHCR_TOKEN }} \
+            --docker-email=${{ secrets.GHCR_EMAIL }} \
+            -n kong --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Generate TLS cert and register to Konnect
         id: cert
         run: |
           mkdir certs
@@ -60,26 +91,16 @@ jobs:
 
       - name: Create TLS secret for Kong
         run: |
-          kubectl create ns kong || true
           kubectl create secret tls kong-cluster-cert -n kong \
             --cert=./certs/tls.crt \
             --key=./certs/tls.key \
             --dry-run=client -o yaml | kubectl apply -f -
 
-      - name: Create GHCR registry pull secret
+      - name: Create values.yaml
         run: |
-          kubectl create secret docker-registry ghcr-secret \
-            --docker-server=ghcr.io \
-            --docker-username=${{ secrets.GHCR_USERNAME }} \
-            --docker-password=${{ secrets.GHCR_TOKEN }} \
-            --docker-email=${{ secrets.GHCR_EMAIL }} \
-            -n kong --dry-run=client -o yaml | kubectl apply -f -
-
-      - name: Generate Helm values.yaml
-        run: |
-          cat <<EOF > ./values.yaml
+          cat <<EOF > values.yaml
           image:
-            repository: ${{ vars.KONG_REPO }}
+            repository: ghcr.io/${{ secrets.GHCR_USERNAME }}/kong-gateway
             tag: ${{ vars.KONG_VER }}
             pullSecrets:
               - ghcr-secret
@@ -93,6 +114,7 @@ jobs:
           env:
             role: data_plane
             database: "off"
+            konnect_mode: "on"
             cluster_mtls: pki
             cluster_control_plane: ${{ steps.cert.outputs.cp_endpoint }}:443
             cluster_server_name: ${{ steps.cert.outputs.cp_endpoint }}
@@ -101,18 +123,11 @@ jobs:
             cluster_cert: /etc/secrets/kong-cluster-cert/tls.crt
             cluster_cert_key: /etc/secrets/kong-cluster-cert/tls.key
             lua_ssl_trusted_certificate: system
-            konnect_mode: "on"
             vitals: "off"
-            nginx_worker_processes: "1"
-            upstream_keepalive_max_requests: "100000"
-            nginx_http_keepalive_requests: "100000"
-            proxy_access_log: "off"
-            dns_stale_ttl: "3600"
             router_flavor: expressions
 
           ingressController:
             enabled: false
-            installCRDs: false
 
           resources:
             requests:
@@ -120,17 +135,8 @@ jobs:
               memory: "2Gi"
           EOF
 
-      - name: Deploy Kong with Helm
+      - name: Deploy Kong DP via Helm
         run: |
           helm repo add kong https://charts.konghq.com
           helm repo update
-          helm upgrade -i my-kong kong/kong -n kong --values ./values.yaml --wait --debug
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: kong-dp-certs
-          path: |
-            ./certs/tls.crt
-            ./certs/tls.key
-            ./values.yaml
+          helm upgrade -i my-kong kong/kong -n kong --values ./values.yaml --wait --atomic --debug
