@@ -2,149 +2,108 @@
 
 # ToDo
 [0. 事前準備](#0.事前準備)<br>
-[1. ゴールデンイメージの作成](#1.ゴールデンイメージの作成)<br>
-[2. Dataplaneの起動と設定反映](#2.Dataplaneの起動と設定反映)<br>
-[3. BookInfoアプリのデプロイ](#3.BookInfoアプリのデプロイ)<br>
-[4. Prometheus/Grafanaのデプロイ](#4.Prometheus/Grafanaのデプロイ)<br>
-[5. 監査ログの取得](#5.監査ログの取得)<br>
-[6. APIOpsの実装](#6.APIOpsの実装)<br>
+[1. Kong CP・DPの構築](#1.Kong CP・DP構築)<br>
+[2. Prometheus/Grafanaのデプロイ](#2.Dataplaneの起動と設定反映)<br>
+[3. 3.サンプルアプリのデプロイ （BookInfo）](#3.BookInfoアプリのデプロイ)<br>
+[4. 監査ログの取得](#4.Prometheus/Grafanaのデプロイ)<br>
+[5. APIOpsの実装](#5.監査ログの取得)<br>
 
 # 0.事前準備
-1. Kubernetesクラスタの用意
-2. k8sクラスタ、Konnectへ接続可能な端末で各種ツールのインストール
-- kubectl
-- helm
-- deck
-3. Konnectのアカウント登録
+1. k8sクラスタの用意　※本手順の資材はaks前提
+- k8sクラスタ構築
+- Ingress Controller（Contour）インストール
+  - 参考：https://qiita.com/ipppppei/items/c15acc5c7f7af3e7c289#contour%E3%81%AE%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB
+2. k8sクラスタ、インターネットに接続可能な端末の用意
+- 端末作成
+- 各種ツールのインストール
+  - kubectl
+  - helm
+  - deck
+3. Konnectのアカウント作成
+- Konnectアカウント作成
+
+# 1.Kong CP・DPの構築
+使用リポジトリ：MasakiGogami-i4/kong-training（本リポジトリ）
+
+## Kong CP構築
+- Konnect上でCPを作成（Gateway Manager > New Gateway > Self-Managed Hybrid）
+## Kong DP構築
+- GHA workflow作成（.github/workflow/deploy_dp.yml）
+  - docker hubからKongコンテナイメージをpull
+  - TrivyでKongイメージの脆弱性をスキャン
+  - Github Container Resistory(GHCR)にタグを付与してKongイメージをpush（ゴールデンイメージ）
+  - GHCRのimage pull用のsecretをk8sに作成
+  - TLS証明書を作成してKonnectに登録
+  - k8sにTLS証明書のsecretを作成
+  - Kong DP用values.yaml作成
+  - k8sにhelmでKong DPをデプロイ
+- Githubに変数設定（vars,secrets）
+- workflow実行　※トリガーは手動実行
+- Konnect上でDPが作成されたことを確認（Gateway Manager > CP選択 > Data Plane Nodes）
+
+# 2. Prometheus/Grafanaのデプロイ
+- 下記ページを参考にしてk8sにhelmでPrometheus/Grafanaをデプロイ
+  - https://qiita.com/ipppppei/items/c15acc5c7f7af3e7c289#promethes-operator%E3%81%AE%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB
+  - ※本デモではcert-managerはインストールしていないため、ingressのenabled、ingressClassName、hosts部分のみ修正でok
+- ブラウザから動作確認
+  - http://prometheus.20-204-106-218.nip.io/ <br>
+  - http://grafana.20-204-106-218.nip.io/login <br>
+※外部IPは自分の環境に合わせて変更すること  
+※Grafanaはadmin/prom-operatorでログイン可能  
+※Kong(official)のGrafanaダッシュボードは以下から取得可能  
+https://grafana.com/grafana/dashboards/7424-kong-official/
+
+# 3.サンプルアプリのデプロイ （BookInfo）
+使用リポジトリ：MasakiGogami-i4/bookinfo
+fork元：https://github.com/imurata/bookinfo
+
+## BookInfo用Kongリソース作成
+- BookInfoアプリ用プラグイン定義作成（kong-plugins/）
+  - 現状はprometheusとratelimit advancedのみグローバルスコープで定義　※その他プラグインは手動設定前提
+- BookInfoアプリ用API Spec作成（docs/openapi/api-spec.yaml）
+- BookInfoアプリ用API Productドキュメント作成（docs/product.md）
+
+- api-spec.yamlのmainリポジトリ更新時にworkflow実行（.github/workflow/deploy_oas.yaml、upload_spec.yaml）
+  - deploy_oas.yaml
+    - API SpecからDeck形式に変換
+    - kong-plugins配下のKongプラグイン定義ファイルもDeck形式に変換
+    - デプロイ
+  - upload_spec.yaml
+    - API SpecをKonnectのAPI Productsの該当Product Versionsにアップロード
+- Konnect上で反映確認
+  - Kongリソースが作成されたことを確認（Gateway Manager > CP選択 > Gateway Services, Routes, Upstreams, Targets, Consumers, Plugins）
+  - API Specが作成されたことを確認
 
 
-# 1.ゴールデンイメージの作成
-1. GHAのworkflow作成<br>
-./.github/workflow/imagepull.yaml
-2. ワークフロー発火
+## BookInfoアプリデプロイ
+- k8sリソース定義ファイル修正（platform/kube/bookinfo.yaml）
+  - BookInfoをインターネット公開するHTTPProxyを追加
+    -  productpageをcontourの外部IPで公開するHTTPProxyを追加　※外部IPは自分の環境に合わせて変更すること
+  - BookInfo details,ratings,reviews宛のリクエストを各マイクロサービスではなくkongに転送させるように修正（下図参考）
+    - productpageのDeploymentのspec.template.spec.envにKongのhost,port等を追加
 
-# 2.Dataplaneの起動と設定反映
-## Dataplaneの起動
-1. Konnectに接続　→　GatewayManagerで新規にCP作成<br>
-2. Data Plane Nodesで Configure data plane<br>
-3. 画面の指示に沿った操作をGHAワークフローimagepull.yamlに追加
-- kongのnamespace作成
-```
-kubectl create namespace kong
-```
-- helmのrepo追加
-```
-helm repo add kong https://charts.konghq.com
-```
-- Update Helm
-```
-helm repo update
-```
-- 証明書作成
-```
-kubectl create secret tls kong-cluster-cert -n kong --cert=/{PATH_TO_FILE}/tls.crt --key=/{PATH_TO_FILE}/tls.key
-```
-- values.yamlの作成<br>
-以下を修正、追記する。（./values.yaml 参照）
-  - repository
-  - tag
-  - imagePullSecrets
-  - serviceMonitor
-  - status
-- Apply the values.yaml
-```
-helm install my-kong kong/kong -n kong --values ./values.yaml
-```
-
-# 3.BookInfoアプリのデプロイ
-## kongリソース作成
-1. deckで接続先の設定、yamlファイルの反映。（./deck-bookinfo.yaml 参照）
-```
-deck --konnect-addr https://us.api.konghq.com \
-  --konnect-control-plane-name ${CONTROLPLANE_NAME} \
-  --konnect-token ${KONNECT_PAT} \
-  gateway sync kong-config.yaml
-```
-
-## productpage向き先修正
-1. https://github.com/imurata/bookinfo/platform/kube/bookinfo.yaml
-をベースにして、details,ratings,reviews宛のリクエストをKong Gatewayに転送するようにproductpageのDeploymentを修正する。
-（./bookinfo.yaml 参照）
-
-Bookinfoの初期状態  
+初期状態  
 <img width="724" alt="image" src="https://github.com/user-attachments/assets/dd734a4d-db71-44d1-ad60-7c235d3d8b9d" />  
 
-productpageの向き先を各マイクロサービスからkongに変更  
+details,ratings,reviews宛のリクエストの向き先をKongに変更した状態  
 <img width="721" alt="image" src="https://github.com/user-attachments/assets/238b19d8-4256-4acf-8faa-305dd035a900" />  
 ※引用：https://qiita.com/ipppppei/items/0c235f9ae9c50131a7c6  
 
+-  GHA workflow作成（.github/workflow/deploy_bookinfo.yml）
+  -  Bookinfoアプリのコンテナイメージ作成
+  -  GHCRにタグを付与してBookinfoイメージをpush
+  -  k8sにkubectlでBookinfoをデプロイ
 
-2. yamlをapply
+-  ブラウザから動作確認 （http://productpage.74-225-133-33.nip.io/productpage）　※外部IPは自分の環境に合わせて変更すること
+
+# 4.監査ログの取得
+使用リポジトリ：MasakiGogami-i4/kong-training（本リポジトリ）
+
+- Konnect監査ログを受信するアプリをデプロイ（audit-logs/webhook-script.yaml、webhook-server.yaml）
 ```
-kubectl apply -f bookinfo.yaml -n kong
-```
-## Bookinfoアプリをインターネット公開
-1. Ingressを作成してグローバルIPアドレスで公開する。（./bookIngress.yaml 参照）
-```
-helm repo add bitnami https://charts.bitnami.com/bitnami
+kubectl apply -f audit-logs/webhook-server.yaml
 
-helm install contour bitnami/contour --namespace projectcontour --create-namespace
-
-kubectl apply -f ./bookIngress.yaml -n bookinfo
-```
-
-2. ブラウザで接続確認<br>
-http://productpage.74-225-133-33.nip.io/productpage
-
-# 4.Prometheus/Grafanaのデプロイ
-以下のリンクを参考にPromethes Operatorをインストールする。<br>
-https://qiita.com/ipppppei/items/c15acc5c7f7af3e7c289
-
-1. Promethes Operatorのインストール
-```
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-
-helm repo update
-
-helm show values prometheus-community/kube-prometheus-stack > prom-values.yaml
-```
-AlertManager、Prometheus、Grafanaについてvalues.yamlに変更を加える。<br>
-※./prom-values.yamlと./prom-values_original.yamlで差分確認可能。<br>
-prom-values.yaml中の公開グローバルIPアドレスは、Bookinfoアプリ公開時に作成したIngressのIPアドレスに変更すること。<br>
-
-変更したvalues.yamlを用いてPrometheus/Grafanaをデプロイ。
-```
-helm upgrade -i -f prom-values.yaml prometheus-stack prometheus-community/kube-prometheus-stack -n prometheus-stack --create-namespace
-
-# 確認
-kubectl get ing -n prometheus-stack
-
-kubectl get issuer,certificate -n prometheus-stack
-
-kubectl get secret -n prometheus-stack |grep general
-
-kubectl get secret -n prometheus-stack prometheus-general-tls -o jsonpath={.data.'ca\.crt'}  | base64 -d | openssl x509 -noout -text | grep -A 1 "Subject Alternative Name"
-```
-
-2. ブラウザで確認<br>
-http://prometheus.20-204-106-218.nip.io/ <br>
-https://grafana.20-204-106-218.nip.io/login <br>
-※グローバルIPアドレスは各自の設定に変更すること。  
-※Grafanaはadmin/prom-operatorでログイン可能。  
-
-
-
-Kongのダッシュボードは以下から取得可能。
-https://grafana.com/grafana/dashboards/7424-kong-official/
-
-3. productpageにアクセスを繰り返すと、メトリクスが取得できていることを確認できる。
-
-# 5.監査ログの取得
-1. audit-logsアプリケーションのデプロイ（Konnect監査ログのwebhook送信先アプリ）
-```
-kubectl apply -f auditlogs-pod.yaml
-
-kubectl apply -f auditlogs-cm.yaml
+kubectl apply -f audit-logs/webhook-script.yaml
 
 kubectl get ing -n audit-logs
 
@@ -153,19 +112,23 @@ kubectl get pod -n audit-logs
 kubectl logs webhook-server -n audit-logs -f
 ```
 
+- Konnect上で監査ログ設定（Organization　> Audit Logs Setup >　Konnect）
+  - 下記設定
+    - Endpoint：http://webhook.20-204-106-218.nip.io/　※グローバルIPアドレスは各自の設定に変更すること
+    - Authorization Header：Bearer hoge　※audit-logsはデモ用のため認証かけていないのでダミーの値でOK
+    - Log Format：Json
+  - View Advanced Fields　>　Disable SSL Verification (Do not recommend)を有効化（disable → enableに変更してSave）
+  - SatusタブでActive、200、timeを確認
 
-2. Konnectで監査ログのセットアップ
--  Organization　→ Audit Logs Setup →　Konnectタブ
-- Endpoint：http://webhook.20-204-106-218.nip.io/
-  - ※グローバルIPアドレスは各自の設定に変更すること。
-- Authorization Header：Bearer hoge
-  - ※audit-logsはデモ用で認証かけていないのでダミーの値でOK。
-- Log Format：Json
-- View Advanced Fields　→　Disable SSL Verification (Do not recommend)を有効にする。
-- disableをenableに変更。
-- Save
-- SatusでActice、200、timeを確認。
+- BookInfoにアクセスして動作確認
+  - audit-logs PodのログにKonnect監査ログが見えることを確認
+```
+kubectl logs webhook-server -n audit-logs | tail -f
+```
+  
+# 5.APIOpsの実装
+使用リポジトリ：MasakiGogami-i4/konnect-apiops-template
+fork元：https://github.com/imurata/konnect-apiops-template
 
-# 6.APIOpsの実装
 以下のリポジトリのREADME及び./github/workflowsを参照。<br>
-https://github.com/NaoyaHorita-i4/konnect-apiops-template/tree/main
+https://github.com/MasakiGogami-i4/kong-training/tree/main
