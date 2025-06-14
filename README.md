@@ -129,7 +129,10 @@ kubectl get secret -n prometheus-stack prometheus-general-tls -o jsonpath={.data
 2. ブラウザで確認<br>
 http://prometheus.20-204-106-218.nip.io/ <br>
 https://grafana.20-204-106-218.nip.io/login <br>
-※Grafanaはadmin/prom-operatorでログイン可能。
+※グローバルIPアドレスは各自の設定に変更すること。  
+※Grafanaはadmin/prom-operatorでログイン可能。  
+
+
 
 Kongのダッシュボードは以下から取得可能。
 https://grafana.com/grafana/dashboards/7424-kong-official/
@@ -153,7 +156,7 @@ kubectl logs webhook-server -n audit-logs -f
 
 2. Konnectで監査ログのセットアップ
 -  Organization　→ Audit Logs Setup →　Konnectタブ
-- Endpoint：http://webhook.74-225-133-33.nip.io/
+- Endpoint：http://webhook.20-204-106-218.nip.io/
   - ※グローバルIPアドレスは各自の設定に変更すること。
 - Authorization Header：Bearer hoge
   - ※audit-logsはデモ用で認証かけていないのでダミーの値でOK。
