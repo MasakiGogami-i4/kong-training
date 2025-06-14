@@ -71,6 +71,14 @@ deck --konnect-addr https://us.api.konghq.com \
 をベースにして、details,ratings,reviews宛のリクエストをKong Gatewayに転送するようにproductpageのDeploymentを修正する。
 （./bookinfo.yaml 参照）
 
+Bookinfoの初期状態  
+<img width="724" alt="image" src="https://github.com/user-attachments/assets/dd734a4d-db71-44d1-ad60-7c235d3d8b9d" />  
+
+productpageの向き先を各マイクロサービスからkongに変更  
+<img width="721" alt="image" src="https://github.com/user-attachments/assets/238b19d8-4256-4acf-8faa-305dd035a900" />  
+※引用：https://qiita.com/ipppppei/items/0c235f9ae9c50131a7c6  
+
+
 2. yamlをapply
 ```
 kubectl apply -f bookinfo.yaml -n kong
