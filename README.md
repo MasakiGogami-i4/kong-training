@@ -112,7 +112,7 @@ kubectl logs webhook-server -n audit-logs -f
 
 - Konnect上で監査ログ設定（Organization　> Audit Logs Setup >　Konnect）
   - 下記設定
-    - Endpoint：http://webhook.20-204-106-218.nip.io/　※グローバルIPアドレスは各自の設定に変更すること
+    - Endpoint：http://webhook.20-204-106-218.nip.io/　※外部IPアドレスは各自の設定に変更すること
     - Authorization Header：Bearer hoge　※audit-logsはデモ用のため認証かけていないのでダミーの値でOK
     - Log Format：Json
   - View Advanced Fields　>　Disable SSL Verification (Do not recommend)を有効化（disable → enableに変更してSave）
