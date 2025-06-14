@@ -1,12 +1,12 @@
 # KongBootCamp
 
 # ToDo
-[0. 事前準備](#0.事前準備)<br>
-[1. Kong CP・DPの構築](#1.Kong CP・DP構築)<br>
-[2. Prometheus/Grafanaのデプロイ](#2.Dataplaneの起動と設定反映)<br>
-[3. 3.サンプルアプリのデプロイ （BookInfo）](#3.BookInfoアプリのデプロイ)<br>
-[4. 監査ログの取得](#4.Prometheus/Grafanaのデプロイ)<br>
-[5. APIOpsの実装](#5.監査ログの取得)<br>
+[0. 事前準備](https://github.com/MasakiGogami-i4/kong-training/blob/main/README.md#0%E4%BA%8B%E5%89%8D%E6%BA%96%E5%82%99)<br>
+[1. Kong CP・DPの構築](https://github.com/MasakiGogami-i4/kong-training/blob/main/README.md#1kong-cpdp%E3%81%AE%E6%A7%8B%E7%AF%89)<br>
+[2. Prometheus/Grafanaのデプロイ](https://github.com/MasakiGogami-i4/kong-training/blob/main/README.md#2-prometheusgrafana%E3%81%AE%E3%83%87%E3%83%97%E3%83%AD%E3%82%A4)<br>
+[3. サンプルアプリのデプロイ （BookInfo）](https://github.com/MasakiGogami-i4/kong-training/blob/main/README.md#3%E3%82%B5%E3%83%B3%E3%83%97%E3%83%AB%E3%82%A2%E3%83%97%E3%83%AA%E3%81%AE%E3%83%87%E3%83%97%E3%83%AD%E3%82%A4-bookinfo)<br>
+[4. 監査ログの取得](https://github.com/MasakiGogami-i4/kong-training/blob/main/README.md#3%E3%82%B5%E3%83%B3%E3%83%97%E3%83%AB%E3%82%A2%E3%83%97%E3%83%AA%E3%81%AE%E3%83%87%E3%83%97%E3%83%AD%E3%82%A4-bookinfo)<br>
+[5. APIOpsの実装](https://github.com/MasakiGogami-i4/kong-training/blob/main/README.md#3%E3%82%B5%E3%83%B3%E3%83%97%E3%83%AB%E3%82%A2%E3%83%97%E3%83%AA%E3%81%AE%E3%83%87%E3%83%97%E3%83%AD%E3%82%A4-bookinfo)<br>
 
 # 0.事前準備
 1. k8sクラスタの用意　※本手順の資材はaks前提
