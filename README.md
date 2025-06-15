@@ -54,7 +54,7 @@ BookInfoアプリを用いて、Kong Konnectを内部ゲートウェイとする
 https://grafana.com/grafana/dashboards/7424-kong-official/
 
 ## 3.サンプルアプリのデプロイ （BookInfo）
-### BookInfo用Kongリソース作成
+### BookInfo用Kongリソース作成（API Ops）
 使用リポジトリ：MasakiGogami-i4/konnect-apiops-template  
 fork元：https://github.com/imurata/konnect-apiops-template
 
@@ -63,16 +63,20 @@ fork元：https://github.com/imurata/konnect-apiops-template
 - BookInfoアプリ用API Spec作成（docs/openapi/api-spec.yaml）
 - BookInfoアプリ用API Productドキュメント作成（docs/product.md）
 
-- api-spec.yamlのmainリポジトリ更新時にworkflow実行（.github/workflow/deploy_oas.yaml、upload_spec.yaml）
+
+- mainリポジトリのapi-spec.yaml更新時にworkflow実行（.github/workflow/deploy_oas.yaml、upload_spec.yaml）
   - deploy_oas.yaml
     - API SpecからDeck形式に変換
     - kong-plugins配下のKongプラグイン定義ファイルもDeck形式に変換
     - デプロイ
   - upload_spec.yaml
     - API SpecをKonnectのAPI Productsの該当Product Versionsにアップロード
+- mainリポジトリのproduct.md更新時にworkflow実行（.github/workflow/upload_doc.md）
+  - API ProductsのDocumentを更新 
 - Konnect上で反映確認
   - Kongリソースが作成されたことを確認（Gateway Manager > CP選択 > Gateway Services, Routes, Upstreams, Targets, Consumers, Plugins）
   - API Specが作成されたことを確認
+  - API ProductsのDocumentが更新されたことを確認
 
 
 ### BookInfoアプリデプロイ
@@ -129,9 +133,5 @@ kubectl logs -f webhook-server -n audit-logs
 kubectl logs webhook-server -n audit-logs | tail -f
 ```
   
-## 5.APIOpsの実装
-使用リポジトリ：MasakiGogami-i4/konnect-apiops-template
-fork元：https://github.com/imurata/konnect-apiops-template
-
-以下のリポジトリのREADME及び./github/workflowsを参照。<br>
-https://github.com/MasakiGogami-i4/kong-training/tree/main
+## 5.初期ユースケースの実装
+- 各マイクロサービスのk8s Serviceにプラグインを設定（keyauth、Proxy Caching）
