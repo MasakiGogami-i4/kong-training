@@ -107,7 +107,7 @@ kubectl get ing -n audit-logs
 
 kubectl get pod -n audit-logs
 
-kubectl logs webhook-server -n audit-logs -f
+kubectl logs -f webhook-server -n audit-logs
 ```
 
 - Konnect上で監査ログ設定（Organization　> Audit Logs Setup >　Konnect）
