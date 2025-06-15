@@ -76,8 +76,15 @@ fork元：https://github.com/imurata/konnect-apiops-template
 - Konnect上で動作確認
   - Kongリソースが作成されたことを確認（Gateway Manager > CP選択 > Gateway Services, Routes, Upstreams, Targets, Consumers, Plugins）
   - API Specが作成されたことを確認
-  - API ProductsのDocumentが更新されたことを確認
+  - API ProductsのDocumentが更新されたことを確認  
 
+※wf②について、現状ではapi-spec.yamlから作成されるKongリソースが適切になっておらず修正が必要な状況のため、下記DeckコマンドにてKongリソースを作成することで代替しています。
+```
+deck --konnect-addr https://us.api.konghq.com \
+  --konnect-control-plane-name ${CONTROLPLANE_NAME} \
+  --konnect-token ${KONNECT_PAT} \
+  gateway sync kong-config.yaml
+```
 
 ### BookInfoアプリデプロイ
 使用リポジトリ：MasakiGogami-i4/bookinfo  
