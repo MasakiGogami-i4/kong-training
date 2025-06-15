@@ -104,9 +104,9 @@ details,ratings,reviews宛のリクエストの向き先をKongに変更した�
 ※引用：https://qiita.com/ipppppei/items/0c235f9ae9c50131a7c6  
 
 -  GHA workflow作成（.github/workflow/deploy_bookinfo.yml）　※wf⑤
-  -  Bookinfoアプリのコンテナイメージ作成
-  -  GHCRにタグを付与してBookinfoイメージをpush
-  -  k8sにkubectlでBookinfoをデプロイ
+   -  Bookinfoアプリのコンテナイメージ作成
+   -  GHCRにタグを付与してBookinfoイメージをpush
+   -  k8sにkubectlでBookinfoをデプロイ
 
 -  ブラウザから動作確認 （http://productpage.74-225-133-33.nip.io/productpage）　※外部IPは自分の環境に合わせて変更すること
 
