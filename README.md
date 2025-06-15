@@ -54,10 +54,10 @@ BookInfoアプリを用いて、Kong Konnectを内部ゲートウェイとする
 https://grafana.com/grafana/dashboards/7424-kong-official/
 
 ## 3.サンプルアプリのデプロイ （BookInfo）
-使用リポジトリ：MasakiGogami-i4/bookinfo
-fork元：https://github.com/imurata/bookinfo
-
 ### BookInfo用Kongリソース作成
+使用リポジトリ：MasakiGogami-i4/konnect-apiops-template  
+fork元：https://github.com/imurata/konnect-apiops-template
+
 - BookInfoアプリ用プラグイン定義作成（kong-plugins/）
   - 現状はprometheusとratelimit advancedのみグローバルスコープで定義　※その他プラグインは手動設定前提
 - BookInfoアプリ用API Spec作成（docs/openapi/api-spec.yaml）
@@ -76,6 +76,9 @@ fork元：https://github.com/imurata/bookinfo
 
 
 ### BookInfoアプリデプロイ
+使用リポジトリ：MasakiGogami-i4/bookinfo  
+fork元：https://github.com/imurata/bookinfo  
+
 - k8sリソース定義ファイル修正（platform/kube/bookinfo.yaml）
   - BookInfoをインターネット公開するHTTPProxyを追加
     -  productpageをcontourの外部IPで公開するHTTPProxyを追加　※外部IPは自分の環境に合わせて変更すること
