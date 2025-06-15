@@ -28,7 +28,7 @@ BookInfoアプリを用いて、Kong Konnectを内部ゲートウェイとする
 ### Kong CP構築
 - Konnect上でCPを作成（Gateway Manager > New Gateway > Self-Managed Hybrid）
 ### Kong DP構築
-- GHA workflow作成（.github/workflow/deploy_dp.yml）
+- GHA workflow作成（.github/workflow/deploy_dp.yml）　※wf①
   - docker hubからKongコンテナイメージをpull
   - TrivyでKongイメージの脆弱性をスキャン
   - Github Container Resistory(GHCR)にタグを付与してKongイメージをpush（ゴールデンイメージ）
@@ -57,23 +57,23 @@ https://grafana.com/grafana/dashboards/7424-kong-official/
 ### BookInfo用Kongリソース作成（API Ops）
 使用リポジトリ：MasakiGogami-i4/konnect-apiops-template  
 fork元：https://github.com/imurata/konnect-apiops-template
+- 資材作成
+  - BookInfoアプリ用プラグイン定義作成（kong-plugins/）
+    - 現状はprometheusとratelimit advancedのみグローバルスコープで定義　※その他プラグインは手動設定前提
+  - BookInfoアプリ用API Spec作成（docs/openapi/api-spec.yaml）
+  - BookInfoアプリ用API Productドキュメント作成（docs/product.md）
 
-- BookInfoアプリ用プラグイン定義作成（kong-plugins/）
-  - 現状はprometheusとratelimit advancedのみグローバルスコープで定義　※その他プラグインは手動設定前提
-- BookInfoアプリ用API Spec作成（docs/openapi/api-spec.yaml）
-- BookInfoアプリ用API Productドキュメント作成（docs/product.md）
-
-
-- mainリポジトリのapi-spec.yaml更新時にworkflow実行（.github/workflow/deploy_oas.yaml、upload_spec.yaml）
-  - deploy_oas.yaml
-    - API SpecからDeck形式に変換
-    - kong-plugins配下のKongプラグイン定義ファイルもDeck形式に変換
-    - デプロイ
-  - upload_spec.yaml
-    - API SpecをKonnectのAPI Productsの該当Product Versionsにアップロード
-- mainリポジトリのproduct.md更新時にworkflow実行（.github/workflow/upload_doc.md）
-  - API ProductsのDocumentを更新 
-- Konnect上で反映確認
+- Github Actions実行
+  - mainリポジトリのapi-spec.yaml更新によりworkflow実行（.github/workflow/deploy_oas.yaml、upload_spec.yaml）
+    - deploy_oas.yaml　※wf②
+      - API SpecからDeck形式に変換
+      - kong-plugins配下のKongプラグイン定義ファイルもDeck形式に変換
+      - デプロイ
+    - upload_spec.yaml　　※wf③
+      - API SpecをKonnectのAPI Productsの該当Product Versionsにアップロード
+  - mainリポジトリのproduct.md更新によりworkflow実行（.github/workflow/upload_doc.md）　　※wf④
+    - API ProductsのDocumentを更新 
+- Konnect上で動作確認
   - Kongリソースが作成されたことを確認（Gateway Manager > CP選択 > Gateway Services, Routes, Upstreams, Targets, Consumers, Plugins）
   - API Specが作成されたことを確認
   - API ProductsのDocumentが更新されたことを確認
