@@ -103,7 +103,7 @@ details,ratings,reviews宛のリクエストの向き先をKongに変更した�
 <img width="721" alt="image" src="https://github.com/user-attachments/assets/238b19d8-4256-4acf-8faa-305dd035a900" />  
 ※引用：https://qiita.com/ipppppei/items/0c235f9ae9c50131a7c6  
 
--  GHA workflow作成（.github/workflow/deploy_bookinfo.yml）
+-  GHA workflow作成（.github/workflow/deploy_bookinfo.yml）　※wf⑤
   -  Bookinfoアプリのコンテナイメージ作成
   -  GHCRにタグを付与してBookinfoイメージをpush
   -  k8sにkubectlでBookinfoをデプロイ
