@@ -1,4 +1,6 @@
-# KongBootCamp　デモ環境構築
+# Kong構築デモ
+BookInfoアプリを用いて、Kong Konnectを内部ゲートウェイとするユースケースを実現するデモ
+
 [0. 事前準備](https://github.com/MasakiGogami-i4/kong-training/blob/main/README.md#0%E4%BA%8B%E5%89%8D%E6%BA%96%E5%82%99)<br>
 [1. Kong CP・DPの構築](https://github.com/MasakiGogami-i4/kong-training/blob/main/README.md#1kong-cpdp%E3%81%AE%E6%A7%8B%E7%AF%89)<br>
 [2. Prometheus/Grafanaのデプロイ](https://github.com/MasakiGogami-i4/kong-training/blob/main/README.md#2-prometheusgrafana%E3%81%AE%E3%83%87%E3%83%97%E3%83%AD%E3%82%A4)<br>
